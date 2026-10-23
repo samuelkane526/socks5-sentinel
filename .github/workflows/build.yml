@@ -1,0 +1,102 @@
+name: Build binaries
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+env:
+  VERSION: "1.0.0"
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            goos: windows
+            platform: windows
+            goarch: amd64
+            arch: x86_64
+            suffix: .exe
+          - runner: ubuntu-latest
+            goos: linux
+            platform: linux
+            goarch: amd64
+            arch: x86_64
+            suffix: ""
+          - runner: macos-14
+            goos: darwin
+            platform: macos
+            arch: arm64
+            goarch: arm64
+            suffix: ""
+          - runner: macos-15-intel
+            goos: darwin
+            platform: macos
+            goarch: amd64
+            arch: x86_64
+            suffix: ""
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Windows C compiler
+        if: matrix.goos == 'windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Install Linux desktop dependencies
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libwayland-dev libxkbcommon-dev xorg-dev
+
+      - name: Build CLI
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          go build -trimpath -o "dist/socks5-vetter-cli-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}" .
+        shell: pwsh
+
+      - name: Build GUI
+        env:
+          CGO_ENABLED: "1"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $output = "dist/socks5-vetter-gui-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}"
+          if ($env:GOOS -eq "windows") {
+            go build -trimpath -ldflags "-H=windowsgui" -o $output ./cmd/socks5-vetter
+          } else {
+            go build -trimpath -o $output ./cmd/socks5-vetter
+          }
+        shell: pwsh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: socks5-vetter-v1.0.0-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
