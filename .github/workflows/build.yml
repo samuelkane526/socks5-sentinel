@@ -26,12 +26,26 @@ jobs:
             platform: windows
             goarch: amd64
             arch: x86_64
+            cc: gcc
+            suffix: .exe
+          - runner: windows-11-arm
+            goos: windows
+            platform: windows
+            goarch: arm64
+            arch: arm64
+            cc: clang
             suffix: .exe
           - runner: ubuntu-latest
             goos: linux
             platform: linux
             goarch: amd64
             arch: x86_64
+            suffix: ""
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            platform: linux
+            goarch: arm64
+            arch: arm64
             suffix: ""
           - runner: macos-14
             goos: darwin
@@ -56,12 +70,19 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Set up Windows C compiler
-        if: matrix.goos == 'windows'
+      - name: Set up Windows x86_64 C compiler
+        if: matrix.goos == 'windows' && matrix.goarch == 'amd64'
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Set up Windows ARM64 C compiler
+        if: matrix.goos == 'windows' && matrix.goarch == 'arm64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          install: mingw-w64-clang-aarch64-clang
 
       - name: Install Linux desktop dependencies
         if: matrix.goos == 'linux'
@@ -84,6 +105,7 @@ jobs:
           CGO_ENABLED: "1"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          CC: ${{ matrix.cc }}
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
           $output = "dist/socks5-vetter-gui-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}"
