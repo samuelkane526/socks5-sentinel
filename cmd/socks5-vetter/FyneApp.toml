@@ -1,0 +1,8 @@
+Website = "https://github.com/proxifly/free-proxy-list"
+
+[Details]
+Icon = "assets/Icon.png"
+Name = "Socks5 Vetter"
+ID = "com.github.samuelkane526.socks5sentinel"
+Version = "1.0.0"
+Build = 1

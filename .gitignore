@@ -1,0 +1,21 @@
+# Go build and test artifacts
+/bin/
+/dist/
+/output/
+*.exe
+*.test
+*.out
+*.prof
+
+# Runtime proxy data and results
+/data/
+/elite_proxies/
+
+# Logs
+*.log
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
