@@ -1,5 +1,7 @@
 # Socks5 Vetter
 
+Everyone pentesster wants SOCKS5 Proxies, but they are either locked behind a paywall, extremely limited, or have MIM and other nefarious activies attached. SOCKS5 Proxies pulls a public list of around 70k proxies from the proxifly/free-proxy-list repo, runs a 5 step vetting process, and leaves you with SOCKS5 Proxies that are safe, and anonymous.   
+
 Find working SOCKS5 proxies, check their behavior, and send HTTP requests through a rotating proxy pool. Socks5 Vetter lives in the `socks5-sentinel` repository and includes the `socks5-vet` Go command-line client and a Fyne desktop app backed by the same networking engine.
 
 ## Highlights
