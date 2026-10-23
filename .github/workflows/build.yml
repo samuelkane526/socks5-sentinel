@@ -75,6 +75,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
+          path-type: inherit
           install: mingw-w64-ucrt-x86_64-gcc
 
       - name: Set up Windows ARM64 C compiler
@@ -82,6 +83,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: CLANGARM64
+          path-type: inherit
           install: mingw-w64-clang-aarch64-clang
 
       - name: Install Linux desktop dependencies
@@ -100,33 +102,29 @@ jobs:
           go build -trimpath -o "dist/socks5-vetter-cli-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}" .
         shell: pwsh
 
-      - name: Build GUI
+      - name: Build GUI (Windows)
+        if: matrix.goos == 'windows'
         env:
           CGO_ENABLED: "1"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CC: ${{ matrix.cc }}
         run: |
-          if ($env:GOOS -eq "windows") {
-            if ($env:GOARCH -eq "amd64") {
-              $env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
-              $env:CC = "C:\msys64\ucrt64\bin\gcc.exe"
-            }
-            if ($env:GOARCH -eq "arm64") {
-              $env:PATH = "C:\msys64\clangarm64\bin;$env:PATH"
-              $env:CC = "C:\msys64\clangarm64\bin\clang.exe"
-            }
-          }
-          
-          New-Item -ItemType Directory -Force dist | Out-Null
-          $output = "dist/socks5-vetter-gui-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}"
-          
-          if ($env:GOOS -eq "windows") {
-            go build -trimpath -ldflags "-H=windowsgui" -o $output ./cmd/socks5-vetter
-          } else {
-            go build -trimpath -o $output ./cmd/socks5-vetter
-          }
-        shell: pwsh
+          mkdir -p dist
+          go build -trimpath -ldflags "-H=windowsgui" -o "dist/socks5-vetter-gui-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}" ./cmd/socks5-vetter
+        shell: msys2 {0}
+
+      - name: Build GUI (Unix)
+        if: matrix.goos != 'windows'
+        env:
+          CGO_ENABLED: "1"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CC: ${{ matrix.cc }}
+        run: |
+          mkdir -p dist
+          go build -trimpath -o "dist/socks5-vetter-gui-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}" ./cmd/socks5-vetter
+        shell: bash
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
