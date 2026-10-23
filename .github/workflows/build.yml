@@ -106,6 +106,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CC: ${{ matrix.cc }}
+          CGO_CFLAGS: "-Qunused-arguments"
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
           $output = "dist/socks5-vetter-gui-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}"
