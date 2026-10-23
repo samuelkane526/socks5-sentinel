@@ -1,4 +1,106 @@
-- name: Build GUI
+name: Build binaries
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+env:
+  VERSION: "1.0.0"
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            goos: windows
+            platform: windows
+            goarch: amd64
+            arch: x86_64
+            cc: gcc
+            suffix: .exe
+          - runner: windows-11-arm
+            goos: windows
+            platform: windows
+            goarch: arm64
+            arch: arm64
+            cc: clang
+            suffix: .exe
+          - runner: ubuntu-latest
+            goos: linux
+            platform: linux
+            goarch: amd64
+            arch: x86_64
+            suffix: ""
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            platform: linux
+            goarch: arm64
+            arch: arm64
+            suffix: ""
+          - runner: macos-14
+            goos: darwin
+            platform: macos
+            arch: arm64
+            goarch: arm64
+            suffix: ""
+          - runner: macos-15-intel
+            goos: darwin
+            platform: macos
+            goarch: amd64
+            arch: x86_64
+            suffix: ""
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Windows x86_64 C compiler
+        if: matrix.goos == 'windows' && matrix.goarch == 'amd64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Set up Windows ARM64 C compiler
+        if: matrix.goos == 'windows' && matrix.goarch == 'arm64'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          install: mingw-w64-clang-aarch64-clang
+
+      - name: Install Linux desktop dependencies
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libwayland-dev libxkbcommon-dev xorg-dev
+
+      - name: Build CLI
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          go build -trimpath -o "dist/socks5-vetter-cli-v${{ env.VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.suffix }}" .
+        shell: pwsh
+
+      - name: Build GUI
         env:
           CGO_ENABLED: "1"
           GOOS: ${{ matrix.goos }}
@@ -25,3 +127,10 @@
             go build -trimpath -o $output ./cmd/socks5-vetter
           }
         shell: pwsh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: socks5-vetter-v1.0.0-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
